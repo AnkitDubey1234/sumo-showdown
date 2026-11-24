@@ -1,78 +1,59 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sumo Showdown</title>
-<style>
-:root{--ink:#241b20;--red:#d74332;--gold:#f5c45e;--cream:#fff8e9;--teal:#185e62}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#fff1d2,#e9b887 70%,#bd795e);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:24px}
-main{width:min(900px,100%);background:#fffaf0;border:4px solid #38252b;border-radius:24px;box-shadow:0 16px 0 #5c3933,0 28px 55px #482a3140;overflow:hidden}
-header{text-align:center;padding:24px 20px 10px}h1{font-size:clamp(2rem,6vw,3.6rem);line-height:1;margin:0;color:#a82d27;letter-spacing:.04em;text-shadow:2px 3px #f4cf8a}header p{margin:10px 0 0;color:#624c4a}
-.hud{display:flex;align-items:center;justify-content:center;gap:20px;padding:8px 20px 14px;flex-wrap:wrap}.score{font-weight:900;font-size:1.2rem}.score b{color:#b43228}.round{background:#33252b;color:#fff8e9;border-radius:99px;padding:8px 18px;font-size:.9rem;font-weight:800}
-.arena{position:relative;margin:0 auto;width:min(680px,calc(100% - 32px));aspect-ratio:1.65/1;border:12px solid #d19b48;border-radius:50%;background:radial-gradient(ellipse,#d8a45e 0 48%,#b77b42 49% 51%,#8a513b 52% 100%);box-shadow:inset 0 0 0 4px #ffe2a3,inset 0 -14px 22px #60372655;overflow:hidden}
-.arena:before{content:"";position:absolute;inset:10%;border:3px dashed #ffe0a477;border-radius:50%}
-.dohyo{position:absolute;left:50%;bottom:18%;width:68%;height:3px;transform:translateX(-50%);background:#fff0c2aa}
-.wrestler{position:absolute;bottom:20%;width:22%;height:40%;display:grid;place-items:center;font-size:clamp(4.4rem,11vw,7.3rem);filter:drop-shadow(0 12px 4px #54351c66);transition:left .12s ease,transform .12s ease;user-select:none}
-#player{left:23%}#cpu{left:55%;transform:scaleX(-1)}
-.wrestler.hit{animation:bump .22s ease}@keyframes bump{50%{translate:0 -18px;rotate:8deg}}
-.ringout{animation:shake .3s ease}@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-.toast{position:absolute;inset:12% 10% auto;text-align:center;font-size:clamp(1rem,3vw,1.5rem);font-weight:1000;color:#fff8e9;text-shadow:0 2px 5px #49291e;pointer-events:none}
-.controls{text-align:center;padding:16px 20px 24px}.hint{color:#735e58;margin:0 0 14px}.buttons{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-button{font:inherit;font-weight:850;border:0;border-radius:14px;padding:13px 20px;cursor:pointer;box-shadow:0 4px 0 #263c38;transition:transform .08s,box-shadow .08s}
-button:active{transform:translateY(3px);box-shadow:0 1px 0 #263c38}
-.action{background:var(--teal);color:white}.secondary{background:#f0cf8f;color:#453027;box-shadow:0 4px 0 #b17b3e}.start{background:var(--red);color:#fff;box-shadow:0 4px 0 #81251e}
-.status{min-height:1.5em;font-weight:800;color:#8e3027;margin-top:12px}
-@media(max-width:520px){body{padding:12px}.arena{border-width:8px}.wrestler{bottom:19%}.hint{font-size:.92rem}button{padding:12px 15px}}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#11151d" />
+  <meta name="description" content="A bright, bouncy 3D sumo showdown. Push your opponent off the dohyo!" />
+  <title>Dohyo Clash — Sumo Showdown</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
 </head>
 <body>
-<main>
-<header><h1>SUMO SHOWDOWN</h1><p>Step into the ring. Push your rival out. Become the dohyo champion!</p></header>
-<div class="hud"><div class="score">YOU <b id="playerScore">0</b></div><div class="round" id="round">FIRST TO 3 WINS</div><div class="score">CPU <b id="cpuScore">0</b></div></div>
-<div class="arena" id="arena" aria-label="Sumo wrestling arena">
-<div class="dohyo"></div><div class="wrestler" id="player" aria-label="Player sumo wrestler">🤼</div><div class="wrestler" id="cpu" aria-label="Computer sumo wrestler">🤼</div><div class="toast" id="toast"></div>
-</div>
-<div class="controls">
-<p class="hint">Move with <b>← →</b> or <b>A / D</b> · Push with <b>Space</b> · On mobile, use the buttons</p>
-<div class="buttons"><button class="action" id="left">◀ Step</button><button class="start" id="push">💥 Push!</button><button class="action" id="right">Step ▶</button></div>
-<div class="status" id="status" aria-live="polite">Ready? Make the first move!</div>
-</div>
-</main>
-<script>
-(()=>{
-const p=document.querySelector('#player'),c=document.querySelector('#cpu'),toast=document.querySelector('#toast'),status=document.querySelector('#status'),arena=document.querySelector('#arena');
-const ps=document.querySelector('#playerScore'),cs=document.querySelector('#cpuScore'),round=document.querySelector('#round');
-let px=23,cx=55,playerScore=0,cpuScore=0,locked=false,finished=false,aiTimer;
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-function paint(){p.style.left=px+'%';c.style.left=cx+'%';}
-function say(s){status.textContent=s}
-function hit(el){el.classList.remove('hit');void el.offsetWidth;el.classList.add('hit')}
-function resetPositions(){px=23;cx=55;paint()}
-function endRound(winner){
- locked=true;clearTimeout(aiTimer);toast.textContent=winner==='player'?'RING OUT! YOU WIN!':'RING OUT! CPU WINS!';
- if(winner==='player'){playerScore++;ps.textContent=playerScore;say('Great push! You take the round.')}else{cpuScore++;cs.textContent=cpuScore;say('The CPU pushed you out. Regroup!')}
- arena.classList.add('ringout');setTimeout(()=>arena.classList.remove('ringout'),320);
- if(playerScore===3||cpuScore===3){finished=true;round.textContent=playerScore===3?'CHAMPION! 🏆':'MATCH OVER';say(playerScore===3?'🏆 You are the Sumo Showdown champion!':'CPU wins the match. Try a rematch!');document.querySelector('#push').textContent='↻ Play Again';return}
- round.textContent='FIRST TO 3 WINS · '+(playerScore+cpuScore+1);
- setTimeout(()=>{toast.textContent='';resetPositions();locked=false;say('Next round! Find your opening.');},1050)
-}
-function move(dir){if(locked||finished)return;px=clamp(px+dir*4,4,Math.min(cx-19,58));paint();scheduleAI()}
-function push(){if(locked)return;if(finished){playerScore=cpuScore=0;ps.textContent=cs.textContent='0';finished=false;round.textContent='FIRST TO 3 WINS';document.querySelector('#push').textContent='💥 Push!';toast.textContent='';resetPositions();say('New match! Make your move.');return}
- if(Math.abs(cx-px)<27){cx+=10;hit(c);say('Direct hit! Keep pushing!')}else{say('Too far away! Step closer first.')}
- paint();if(cx>79){endRound('player');return}scheduleAI()
-}
-function scheduleAI(){clearTimeout(aiTimer);if(locked||finished)return;aiTimer=setTimeout(()=>{if(locked||finished)return;
- const distance=cx-px;
- if(distance>23){cx-=Math.min(3,distance-20);say('CPU is closing in…')}
- else if(Math.random()<.72){px-=8;hit(p);say('CPU charges! Push back!')}
- else{cx+=4;say('CPU feints!')}
- paint();if(px<5){endRound('cpu');return}scheduleAI()
-},650+Math.random()*500)}
-document.querySelector('#left').onclick=()=>move(-1);document.querySelector('#right').onclick=()=>move(1);document.querySelector('#push').onclick=push;
-window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1);if(e.key===' ')push()});
-paint()
-})();
-</script>
+  <main id="game" aria-label="Dohyo Clash sumo game">
+    <div id="stage"></div>
+    <div id="vignette"></div>
+    <header id="topbar" class="hud hidden">
+      <button class="icon-button" id="home-button" aria-label="Main menu">⌂</button>
+      <div class="score score-left"><span class="player-label">PLAYER ONE</span><span id="score-one">0</span><span class="health"><i id="health-one"></i></span></div>
+      <div class="round-center"><span id="round-label">ROUND 1</span><strong id="timer">00:00</strong><span class="bestof">FIRST TO TWO</span></div>
+      <div class="score score-right"><span class="player-label" id="opponent-label">RIVAL</span><span id="score-two">0</span><span class="health"><i id="health-two"></i></span></div>
+      <button class="icon-button" id="sound-button" aria-label="Toggle sound">♫</button>
+    </header>
+    <div id="countdown" class="countdown hidden"></div>
+    <div id="toast" class="toast hidden"></div>
+    <section id="title-screen" class="overlay">
+      <div class="title-card">
+        <div class="eyebrow"><span>✳</span> THE WORLD'S SMALLEST BIGGEST LEAGUE <span>✳</span></div>
+        <h1>DOHYO<br><span>CLASH!</span></h1>
+        <p class="subtitle">BIG BELLY. BIGGER BRAVADO.</p>
+        <div class="title-rule"><i></i><b>◈</b><i></i></div>
+        <div class="menu-buttons">
+          <button class="button button-primary" id="play-button"><span>●</span> PLAY VS CPU <small>01</small></button>
+          <button class="button button-secondary" id="versus-button"><span>⇄</span> LOCAL VERSUS <small>02</small></button>
+          <div class="secondary-actions"><button class="text-button" id="how-button">HOW TO PLAY ↗</button><button class="text-button" id="settings-button">SETTINGS ⚙</button></div>
+        </div>
+        <div class="footer-note"><span>▲</span> THE RING IS ROUND. THE RIVAL IS SOFT. <span>▲</span></div>
+      </div>
+      <div class="stickers"><span class="sticker sticker-left">NO<br>MER<br>CY!</span><span class="sticker sticker-right">SUMO<br>SUPREMO<br>™</span></div>
+    </section>
+    <section id="how-screen" class="overlay hidden">
+      <div class="panel">
+        <div class="panel-kicker">THE RULES ARE SIMPLE</div><h2>BOUNCE THEM<br>OUT.</h2>
+        <p>Stay on the raised ring. Get your rival onto the floor. Last sumo standing wins the round.</p>
+        <div class="control-grid"><div><b class="color-pink">01 / MUSASHI</b><span>W A S D <small>MOVE</small></span><span>SPACE <small>SHOVE · HOLD TO CHARGE</small></span><span>SHIFT <small>BRACE</small></span></div><div><b class="color-blue">02 / RIVAL</b><span>← ↑ → ↓ <small>MOVE</small></span><span>ENTER <small>SHOVE</small></span><span>RIGHT SHIFT <small>BRACE</small></span></div></div>
+        <p class="mobile-note">On a phone? Use the left thumb stick to move. Tap SHOVE to bump. Hold BRACE to hold your ground.</p>
+        <button class="button button-primary panel-back" id="how-back">GOT IT — LET'S GO <small>↗</small></button>
+      </div>
+    </section>
+    <section id="settings-screen" class="overlay hidden"><div class="panel compact-panel"><div class="panel-kicker">TUNE THE TOURNAMENT</div><h2>YOUR<br>CALL.</h2><label class="setting"><span>CPU DIFFICULTY</span><select id="difficulty"><option value="easy">Chill (easy)</option><option value="medium" selected>Spicy (medium)</option><option value="hard">Savage (hard)</option></select></label><label class="setting"><span>TOURNAMENT</span><select id="series"><option value="3" selected>Best of 3</option><option value="1">One round</option></select></label><label class="setting"><span>IMPACT SOUNDS</span><input id="sound-toggle" type="checkbox" checked /></label><button class="button button-primary panel-back" id="settings-back">BACK TO THE ACTION <small>↗</small></button></div></section>
+    <section id="result-screen" class="overlay hidden"><div class="panel result-panel"><div class="panel-kicker" id="result-kicker">THE CROWD GOES BANANAS</div><h2 id="result-title">OUT OF<br>BOUNDS!</h2><p id="result-copy">A LEGEND IS BORN. A NAPPY IS SOILED.</p><div class="result-score" id="result-score">1 <span>—</span> 0</div><button class="button button-primary" id="rematch-button">⟳ &nbsp; REMATCH <small>↗</small></button><button class="text-button panel-menu" id="menu-button">BACK TO MAIN MENU</button></div></section>
+    <div id="touch-controls" class="touch hidden"><div class="stick-base" id="stick"><div class="stick-knob" id="stick-knob"></div></div><div class="touch-actions"><button id="touch-shove" class="touch-button touch-shove">POW!</button><button id="touch-brace" class="touch-button touch-brace">BRACE</button></div></div>
+    <div id="tip" class="tip hidden">MOVE <kbd>W A S D</kbd> · <kbd>SPACE</kbd> SHOVE · <kbd>SHIFT</kbd> BRACE</div>
+    <div id="error-screen" class="overlay hidden"><div class="panel"><div class="panel-kicker">THE REF IS CONFUSED</div><h2>RING CREW<br>IS MISSING.</h2><p id="error-message">Please launch Dohyo Clash with the included local server.</p><button class="button button-primary" onclick="location.reload()">RETRY <small>↻</small></button></div></div>
+  </main>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

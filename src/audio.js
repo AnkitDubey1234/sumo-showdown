@@ -1,0 +1,5 @@
+let ctx=null,muted=false;
+export function setMuted(value){muted=value}
+export function isMuted(){return muted}
+function audio(){if(muted)return null;try{ctx??=new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();return ctx}catch{return null}}
+export function playTone(type='thump',power=1){const c=audio();if(!c)return;const now=c.currentTime;const osc=c.createOscillator(),gain=c.createGain();osc.connect(gain);gain.connect(c.destination);const f=type==='gong'?140:type==='pop'?280:82;osc.type=type==='gong'?'sine':'triangle';osc.frequency.setValueAtTime(f,now);osc.frequency.exponentialRampToValueAtTime(Math.max(34,f*.43),now+.13);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.19*Math.min(1,power),now+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+.22);osc.start(now);osc.stop(now+.23);if(type==='gong'){const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=315;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.05,now);g.gain.exponentialRampToValueAtTime(.0001,now+.75);o.start(now);o.stop(now+.76)}}
